@@ -18,11 +18,11 @@ services:
         fromService:
           type: web
           name: personal-finance
-          property: hostport
+          property: url
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
-        value: error
+        value: debug
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
@@ -48,7 +48,7 @@ services:
       - key: CACHE_STORE
         value: database
       - key: SESSION_DRIVER
-        value: database
+        value: cookie
       - key: QUEUE_CONNECTION
         value: database
 

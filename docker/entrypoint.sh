@@ -1,5 +1,8 @@
 #!/bin/sh
 
+echo "==> Clearing stale cache..."
+php artisan optimize:clear || true
+
 echo "==> Running database migrations..."
 php artisan migrate --force || echo "WARNING: Migrations failed, continuing..."
 
