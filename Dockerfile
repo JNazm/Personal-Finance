@@ -3,7 +3,6 @@ FROM php:8.4-fpm-alpine
 # Install system dependencies
 RUN apk add --no-cache \
     nginx \
-    supervisor \
     curl \
     zip \
     unzip \
@@ -35,8 +34,8 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Configure Nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 
-# Configure Supervisor
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Configure PHP-FPM pool (force TCP on 127.0.0.1:9000)
+COPY docker/www.conf /usr/local/etc/php-fpm.d/www.conf
 
 # Configure PHP
 COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini

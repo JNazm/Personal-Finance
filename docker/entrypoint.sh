@@ -7,10 +7,16 @@ echo "==> Running database migrations..."
 php artisan migrate --force || echo "WARNING: Migrations failed, continuing..."
 
 echo "==> Caching configuration..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan config:cache || true
+php artisan route:cache || true
+php artisan view:cache || true
 php artisan storage:link || true
 
-echo "==> Starting services..."
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+echo "==> Starting php-fpm..."
+/usr/local/sbin/php-fpm -D
+
+echo "==> Waiting for php-fpm to be ready..."
+sleep 2
+
+echo "==> Starting nginx..."
+exec nginx -g "daemon off;"
