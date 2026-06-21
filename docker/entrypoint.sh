@@ -6,8 +6,12 @@ echo "==> Clearing ALL cached files..."
 rm -f /var/www/html/bootstrap/cache/*.php
 
 echo "==> Running database migrations..."
+echo "DB_HOST: $DB_HOST"
+echo "DB_DATABASE: $DB_DATABASE"
+echo "DB_USERNAME: $DB_USERNAME"
 php artisan migrate --force --verbose 2>&1
-echo "Migration exit code: $?"
+MIGRATE_EXIT=$?
+echo "Migration exit code: $MIGRATE_EXIT"
 
 echo "==> Creating storage link..."
 php artisan storage:link 2>&1 || true
