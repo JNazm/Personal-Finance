@@ -1,21 +1,14 @@
 #!/bin/sh
 
 echo "====== ENTRYPOINT START ======"
-echo "PHP-FPM binary: $(which php-fpm || echo NOT FOUND)"
-echo "PHP-FPM config files:"
-ls /usr/local/etc/php-fpm.d/
 
-echo ""
-echo "==> Clearing stale cache..."
-php artisan optimize:clear || true
+echo "==> Clearing ALL cached files..."
+rm -f /var/www/html/bootstrap/cache/*.php
 
 echo "==> Running database migrations..."
 php artisan migrate --force && echo "Migrations OK" || echo "WARNING: Migrations failed"
 
-echo "==> Caching config/routes/views..."
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
+echo "==> Creating storage link..."
 php artisan storage:link || true
 
 echo "==> Starting php-fpm in background..."
@@ -32,7 +25,7 @@ for i in $(seq 1 15); do
         break
     fi
     if ! kill -0 $FPM_PID 2>/dev/null; then
-        echo "ERROR: php-fpm process died! Exit status checked."
+        echo "ERROR: php-fpm process died!"
         break
     fi
     echo "  still waiting... ${i}/15"
@@ -40,7 +33,7 @@ for i in $(seq 1 15); do
 done
 
 if [ "$READY" -eq 0 ]; then
-    echo "ERROR: php-fpm never became ready. Check config above."
+    echo "ERROR: php-fpm never became ready."
 fi
 
 echo "==> Starting nginx..."
