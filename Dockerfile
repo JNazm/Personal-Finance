@@ -8,6 +8,8 @@ RUN apk add --no-cache \
     unzip \
     git \
     netcat-openbsd \
+    nodejs \
+    npm \
     oniguruma-dev \
     libpng-dev \
     libjpeg-turbo-dev \
@@ -54,6 +56,9 @@ COPY . .
 
 # Install PHP dependencies (production only)
 RUN COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev --optimize-autoloader --no-interaction --ignore-platform-reqs
+
+# Build frontend assets
+RUN npm ci && npm run build && rm -rf node_modules
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
