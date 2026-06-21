@@ -6,10 +6,11 @@ echo "==> Clearing ALL cached files..."
 rm -f /var/www/html/bootstrap/cache/*.php
 
 echo "==> Running database migrations..."
-php artisan migrate --force && echo "Migrations OK" || echo "WARNING: Migrations failed"
+php artisan migrate --force --verbose 2>&1
+echo "Migration exit code: $?"
 
 echo "==> Creating storage link..."
-php artisan storage:link || true
+php artisan storage:link 2>&1 || true
 
 echo "==> Starting php-fpm in background..."
 php-fpm &
