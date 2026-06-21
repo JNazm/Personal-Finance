@@ -41,6 +41,10 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Configure PHP
 COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
 
+# Copy entrypoint
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Set working directory
 WORKDIR /var/www/html
 
@@ -55,11 +59,6 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
 
-# Cache Laravel config, routes, and views for production
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
-
 EXPOSE 80
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/entrypoint.sh"]
