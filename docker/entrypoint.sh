@@ -12,11 +12,18 @@ php artisan route:cache || true
 php artisan view:cache || true
 php artisan storage:link || true
 
-echo "==> Starting php-fpm..."
-/usr/local/sbin/php-fpm -D
+echo "==> Starting php-fpm in background..."
+php-fpm &
 
-echo "==> Waiting for php-fpm to be ready..."
-sleep 2
+echo "==> Waiting for php-fpm on port 9000..."
+for i in $(seq 1 15); do
+    if nc -z 127.0.0.1 9000 2>/dev/null; then
+        echo "php-fpm is ready."
+        break
+    fi
+    echo "Waiting... ($i)"
+    sleep 1
+done
 
 echo "==> Starting nginx..."
 exec nginx -g "daemon off;"

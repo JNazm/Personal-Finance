@@ -7,6 +7,7 @@ RUN apk add --no-cache \
     zip \
     unzip \
     git \
+    netcat-openbsd \
     oniguruma-dev \
     libpng-dev \
     libjpeg-turbo-dev \
