@@ -35,8 +35,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Configure Nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 
-# Configure PHP-FPM pool (force TCP on 127.0.0.1:9000)
-COPY docker/www.conf /usr/local/etc/php-fpm.d/www.conf
+# Allow env vars to reach PHP-FPM workers (override zz-docker.conf clear_env)
+RUN echo '[www]' > /usr/local/etc/php-fpm.d/zzz-env.conf && \
+    echo 'clear_env = no' >> /usr/local/etc/php-fpm.d/zzz-env.conf
 
 # Configure PHP
 COPY docker/php.ini /usr/local/etc/php/conf.d/custom.ini
