@@ -47,6 +47,14 @@
             @endif
         </div>
 
+        <div>
+            <x-input-label for="monthly_salary" :value="__('Monthly Salary (RM)')" />
+            <x-text-input id="monthly_salary" name="monthly_salary" type="number" step="0.01" min="0"
+                class="mt-1 block w-full"
+                :value="old('monthly_salary', $user->monthly_salary)" />
+            <x-input-error class="mt-2" :messages="$errors->get('monthly_salary')" />
+        </div>
+
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>
 

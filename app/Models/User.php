@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'monthly_salary'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -33,5 +33,15 @@ class User extends Authenticatable
     public function debts()
     {
         return $this->hasMany(Debt::class);
+    }
+
+    public function commitments()
+    {
+        return $this->hasMany(Commitment::class);
+    }
+
+    public function otherDebts()
+    {
+        return $this->hasMany(OtherDebt::class);
     }
 }

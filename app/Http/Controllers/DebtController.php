@@ -11,7 +11,7 @@ class DebtController extends Controller
     public function index()
     {
         $debts = auth()->user()->debts()->with('payments')->latest()->get();
-        return view('debt-tracker.index', compact('debts'));
+        return view('my-debt.index', compact('debts'));
     }
 
     public function store(Request $request)
@@ -39,7 +39,7 @@ class DebtController extends Controller
             ]);
         }
 
-        return redirect()->route('debt-tracker.index')->with('success', 'Debt added successfully.');
+        return redirect()->route('my-debt.index')->with('success', 'Debt added successfully.');
     }
 
     public function togglePayment(Request $request, Debt $debt, int $monthIndex)
@@ -66,6 +66,6 @@ class DebtController extends Controller
     {
         abort_unless(auth()->id() === $debt->user_id, 403);
         $debt->delete();
-        return redirect()->route('debt-tracker.index')->with('success', 'Debt deleted.');
+        return redirect()->route('my-debt.index')->with('success', 'Debt deleted.');
     }
 }

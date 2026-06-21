@@ -15,8 +15,14 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('debt-tracker.index')" :active="request()->routeIs('debt-tracker.*')">
-                        {{ __('Debt Tracker') }}
+                    <x-nav-link :href="route('my-debt.index')" :active="request()->routeIs('my-debt.*')">
+                        {{ __('My Debt') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('other-debts.index')" :active="request()->routeIs('other-debts.*')">
+                        {{ __('Debt From Others') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('commitments.index')" :active="request()->routeIs('commitments.*')">
+                        {{ __('Commitments') }}
                     </x-nav-link>
                 </div>
             </div>
@@ -73,8 +79,14 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('debt-tracker.index')" :active="request()->routeIs('debt-tracker.*')">
-                {{ __('Debt Tracker') }}
+            <x-responsive-nav-link :href="route('my-debt.index')" :active="request()->routeIs('my-debt.*')">
+                {{ __('My Debt') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('other-debts.index')" :active="request()->routeIs('other-debts.*')">
+                {{ __('Debt From Others') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('commitments.index')" :active="request()->routeIs('commitments.*')">
+                {{ __('Commitments') }}
             </x-responsive-nav-link>
         </div>
 
