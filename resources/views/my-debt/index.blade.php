@@ -56,10 +56,10 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Start Month</label>
-                            <input type="month" name="start_month" required
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
+                            <input type="date" name="start_month" required
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                value="{{ old('start_month', now()->format('Y-m')) }}">
+                                value="{{ old('start_month', now()->format('Y-m-d')) }}">
                             @error('start_month')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                         </div>
 
@@ -84,6 +84,23 @@
                     $perMonth     = $debt->payment_per_month;
                     $progress     = $debt->months > 0 ? ($paidCount / $debt->months) * 100 : 0;
                     $startDate    = \Carbon\Carbon::parse($debt->start_month);
+                    $isCompleted  = $paidCount >= $debt->months;
+
+                    // Current month index from start date
+                    $currentMonthIndex = (int) $startDate->diffInMonths(now()) + 1;
+                    $currentPayment    = $debt->payments->firstWhere('month_index', $currentMonthIndex);
+                    $isOnTrack        = $currentPayment && $currentPayment->is_paid;
+
+                    if ($isCompleted) {
+                        $statusLabel = '✓ Completed';
+                        $statusClass = 'bg-green-500 text-white';
+                    } elseif ($isOnTrack) {
+                        $statusLabel = '✓ On Track';
+                        $statusClass = 'bg-yellow-400 text-white';
+                    } else {
+                        $statusLabel = '✗ Off Track';
+                        $statusClass = 'bg-red-500 text-white';
+                    }
                 @endphp
 
                 <div class="bg-white shadow-sm rounded-2xl overflow-hidden">
@@ -97,14 +114,14 @@
                                     RM{{ number_format($perMonth, 2) }}/month
                                     &bull; {{ $debt->months }} months
                                     &bull; Total: RM{{ number_format($debt->total_amount, 2) }}
+                                    &bull; From: {{ $startDate->format('d M Y') }}
                                 </p>
                             </div>
 
                             <div class="flex items-center gap-2 flex-wrap">
-                                @php $isCompleted = $paidCount >= $debt->months; @endphp
                                 <span id="status-{{ $debt->id }}"
-                                    class="text-sm px-3 py-1 rounded-full font-medium {{ $isCompleted ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                                    {{ $isCompleted ? '✓ Completed' : '⏳ Pending' }}
+                                    class="text-sm px-3 py-1 rounded-full font-bold {{ $statusClass }}">
+                                    {{ $statusLabel }}
                                 </span>
 
                                 <span class="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium" id="badge-{{ $debt->id }}">
@@ -179,11 +196,11 @@
                                 <tbody>
                                     @foreach($debt->payments->sortBy('month_index') as $payment)
                                         @php
-                                            $monthDate = $startDate->copy()->addMonths($payment->month_index - 1);
+                                            $paymentDate = $startDate->copy()->addMonths($payment->month_index - 1);
                                         @endphp
                                         <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
                                             <td class="py-3 px-4 text-center text-gray-700">{{ $payment->month_index }}</td>
-                                            <td class="py-3 px-4 text-center text-gray-700">{{ $monthDate->format('M Y') }}</td>
+                                            <td class="py-3 px-4 text-center text-gray-700">{{ $paymentDate->format('d M Y') }}</td>
                                             <td class="py-3 px-4 text-center text-gray-700">RM{{ number_format($perMonth, 2) }}</td>
                                             <td class="py-3 px-4 text-center">
                                                 <button type="button"
@@ -264,12 +281,15 @@
 
                 // Update status badge
                 const statusEl = document.getElementById('status-' + debtId);
-                if (data.paid_months >= data.total_months) {
+                if (data.is_completed) {
                     statusEl.textContent = '✓ Completed';
-                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-medium bg-green-100 text-green-700';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-green-500 text-white';
+                } else if (data.is_on_track) {
+                    statusEl.textContent = '✓ On Track';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-yellow-400 text-white';
                 } else {
-                    statusEl.textContent = '⏳ Pending';
-                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-medium bg-yellow-100 text-yellow-700';
+                    statusEl.textContent = '✗ Off Track';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-red-500 text-white';
                 }
             });
         }

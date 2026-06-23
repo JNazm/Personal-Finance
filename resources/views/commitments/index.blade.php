@@ -20,7 +20,7 @@
                 <h3 class="text-lg font-semibold text-gray-800 mb-4">Add New Commitment</h3>
                 <form method="POST" action="{{ route('commitments.store') }}">
                     @csrf
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Commitment Name</label>
@@ -46,6 +46,33 @@
                             @error('amount_per_month')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
                         </div>
 
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                            <select name="type" id="commitment_type" onchange="toggleTypeFields()"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                <option value="infinite" {{ old('type', 'infinite') === 'infinite' ? 'selected' : '' }}>Infinite</option>
+                                <option value="normal" {{ old('type') === 'normal' ? 'selected' : '' }}>Normal (End Date)</option>
+                                <option value="normal-month" {{ old('type') === 'normal-month' ? 'selected' : '' }}>Normal (No. of Months)</option>
+                            </select>
+                            @error('type')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div id="end_date_field" class="{{ old('type') === 'normal' ? '' : 'hidden' }}">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">End Date</label>
+                            <input type="date" name="end_date" id="end_date"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                value="{{ old('end_date') }}">
+                            @error('end_date')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div id="num_months_field" class="{{ old('type') === 'normal-month' ? '' : 'hidden' }}">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">No. of Months</label>
+                            <input type="number" name="num_months" id="num_months" min="1"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                placeholder="e.g. 12" value="{{ old('num_months') }}">
+                            @error('num_months')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
+                        </div>
+
                     </div>
 
                     <div class="mt-4">
@@ -67,7 +94,23 @@
                     $amountLeft = $commitment->amount_remaining;
                     $perMonth   = $commitment->amount_per_month;
                     $progress   = $total > 0 ? ($paidCount / $total) * 100 : 0;
-                    $isUpToDate = $remaining === 0;
+
+                    $thisYearMonth = now()->format('Y-m');
+                    $currentPayment = $commitment->payments->first(fn($p) => str_starts_with($p->month_date, $thisYearMonth));
+                    $isCompleted = in_array($commitment->type, ['normal', 'normal-month']) && $commitment->end_date && now()->gt($commitment->end_date) && $remaining === 0;
+                    $paymentNotDueYet = $currentPayment && $currentPayment->month_date > now()->format('Y-m-d');
+                    $isOnTrack   = !$isCompleted && ($paymentNotDueYet || ($currentPayment && $currentPayment->is_paid));
+
+                    if ($isCompleted) {
+                        $statusLabel = '✓ Completed';
+                        $statusClass = 'bg-green-500 text-white';
+                    } elseif ($isOnTrack) {
+                        $statusLabel = '✓ On Track';
+                        $statusClass = 'bg-yellow-400 text-white';
+                    } else {
+                        $statusLabel = '✗ Off Track';
+                        $statusClass = 'bg-red-500 text-white';
+                    }
                 @endphp
 
                 <div class="bg-white shadow-sm rounded-2xl overflow-hidden">
@@ -80,17 +123,26 @@
                                 <p class="text-sm text-gray-500 mt-0.5">
                                     RM{{ number_format($perMonth, 2) }}/month
                                     &bull; Started: {{ \Carbon\Carbon::parse($commitment->date_started)->format('d M Y') }}
+                                    @if(in_array($commitment->type, ['normal', 'normal-month']) && $commitment->end_date)
+                                        &bull; Ends: {{ \Carbon\Carbon::parse($commitment->end_date)->format('d M Y') }}
+                                    @else
+                                        &bull; <span class="text-purple-500 font-medium">Infinite</span>
+                                    @endif
                                 </p>
                             </div>
 
                             <div class="flex items-center gap-2 flex-wrap">
                                 <span id="status-{{ $commitment->id }}"
-                                    class="text-sm px-3 py-1 rounded-full font-medium {{ $isUpToDate ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700' }}">
-                                    {{ $isUpToDate ? '✓ Up to Date' : '⏳ Pending' }}
+                                    class="text-sm px-3 py-1 rounded-full font-bold {{ $statusClass }}">
+                                    {{ $statusLabel }}
                                 </span>
 
-                                <span class="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium" id="badge-{{ $commitment->id }}">
-                                    {{ $paidCount }}/{{ $total }} months paid
+                                <span class="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium" id="badge-{{ $commitment->id }}" data-type="{{ $commitment->type }}">
+                                    @if($commitment->type === 'infinite')
+                                        {{ $paidCount }} months paid
+                                    @else
+                                        {{ $paidCount }}/{{ $total }} months paid
+                                    @endif
                                 </span>
 
                                 <button onclick="toggleDetail('detail-{{ $commitment->id }}')"
@@ -124,27 +176,33 @@
                     <div id="detail-{{ $commitment->id }}" class="border-t border-gray-100 hidden">
 
                         {{-- Summary stats --}}
-                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 px-6 py-5">
+                        <div class="grid grid-cols-3 sm:grid-cols-{{ $commitment->type === 'infinite' ? '3' : '5' }} gap-3 px-6 py-5">
                             <div class="bg-blue-50 rounded-xl p-4 text-center">
-                                <p class="text-2xl font-bold text-blue-600" id="total-months-{{ $commitment->id }}">{{ $total }}</p>
+                                <p class="text-2xl font-bold text-blue-600" id="total-months-{{ $commitment->id }}">
+                                    {{ $commitment->type === 'infinite' ? '∞' : $total }}
+                                </p>
                                 <p class="text-xs font-semibold text-gray-500 mt-1 uppercase tracking-wide">Total Months</p>
                             </div>
                             <div class="bg-green-50 rounded-xl p-4 text-center">
                                 <p class="text-2xl font-bold text-green-600" id="paid-months-{{ $commitment->id }}">{{ $paidCount }}</p>
                                 <p class="text-xs font-semibold text-gray-500 mt-1 uppercase tracking-wide">Months Paid</p>
                             </div>
+                            @if($commitment->type !== 'infinite')
                             <div class="bg-red-50 rounded-xl p-4 text-center">
                                 <p class="text-2xl font-bold text-red-500" id="remaining-months-{{ $commitment->id }}">{{ $remaining }}</p>
                                 <p class="text-xs font-semibold text-gray-500 mt-1 uppercase tracking-wide">Months Remaining</p>
                             </div>
+                            @endif
                             <div class="bg-blue-50 rounded-xl p-4 text-center">
                                 <p class="text-xl font-bold text-blue-600" id="amount-paid-{{ $commitment->id }}">RM{{ number_format($amountPaid, 2) }}</p>
                                 <p class="text-xs font-semibold text-gray-500 mt-1 uppercase tracking-wide">Amount Paid</p>
                             </div>
+                            @if($commitment->type !== 'infinite')
                             <div class="bg-red-50 rounded-xl p-4 text-center">
                                 <p class="text-xl font-bold text-red-500" id="amount-remaining-{{ $commitment->id }}">RM{{ number_format($amountLeft, 2) }}</p>
                                 <p class="text-xs font-semibold text-gray-500 mt-1 uppercase tracking-wide">Amount Remaining</p>
                             </div>
+                            @endif
                         </div>
 
                         {{-- Payment table --}}
@@ -159,7 +217,7 @@
                             @endphp
 
                             {{-- Year tabs --}}
-                            <div class="flex flex-wrap gap-2 mb-4" id="year-tabs-{{ $commitment->id }}">
+                            <div class="flex gap-2 mb-4 overflow-x-auto pb-2 flex-nowrap" id="year-tabs-{{ $commitment->id }}">
                                 @foreach($years as $year)
                                     <button
                                         onclick="switchYear('{{ $commitment->id }}', '{{ $year }}')"
@@ -175,8 +233,22 @@
 
                             {{-- Tables per year --}}
                             @foreach($commitment->payments->sortBy('month_date')->groupBy(fn($p) => substr($p->month_date, 0, 4)) as $year => $yearPayments)
+                                @php $allPaid = $yearPayments->every(fn($p) => $p->is_paid); @endphp
                                 <div id="year-table-{{ $commitment->id }}-{{ $year }}"
                                     class="{{ $year == $defaultYear ? '' : 'hidden' }} overflow-x-auto">
+
+                                    {{-- Mark whole year checkbox --}}
+                                    <div class="flex items-center gap-2 mb-3">
+                                        <input type="checkbox"
+                                            id="year-check-{{ $commitment->id }}-{{ $year }}"
+                                            {{ $allPaid ? 'checked' : '' }}
+                                            onchange="toggleYear(this, '{{ $commitment->id }}', '{{ $year }}', '{{ route('commitments.toggleYear', $commitment) }}')"
+                                            class="w-4 h-4 accent-blue-600 cursor-pointer">
+                                        <label for="year-check-{{ $commitment->id }}-{{ $year }}" class="text-sm font-semibold text-gray-700 cursor-pointer">
+                                            Mark {{ $year }} as fully paid
+                                        </label>
+                                    </div>
+
                                     <table class="w-full text-sm">
                                         <thead>
                                             <tr class="bg-slate-700 text-white">
@@ -190,7 +262,7 @@
                                             @foreach($yearPayments->values() as $i => $payment)
                                                 <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
                                                     <td class="py-3 px-4 text-center text-gray-700">{{ $i + 1 }}</td>
-                                                    <td class="py-3 px-4 text-center text-gray-700">{{ \Carbon\Carbon::parse($payment->month_date)->format('M Y') }}</td>
+                                                    <td class="py-3 px-4 text-center text-gray-700">{{ \Carbon\Carbon::parse($payment->month_date)->format('d M Y') }}</td>
                                                     <td class="py-3 px-4 text-center text-gray-700">RM{{ number_format($perMonth, 2) }}</td>
                                                     <td class="py-3 px-4 text-center">
                                                         <button type="button"
@@ -224,6 +296,78 @@
 
     <script>
         const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+
+        function toggleTypeFields() {
+            const type = document.getElementById('commitment_type').value;
+            const endDateField   = document.getElementById('end_date_field');
+            const numMonthsField = document.getElementById('num_months_field');
+            const endDateInput   = document.getElementById('end_date');
+            const numMonthsInput = document.getElementById('num_months');
+
+            endDateField.classList.add('hidden');
+            numMonthsField.classList.add('hidden');
+            endDateInput.required   = false;
+            endDateInput.value      = '';
+            numMonthsInput.required = false;
+            numMonthsInput.value    = '';
+
+            if (type === 'normal') {
+                endDateField.classList.remove('hidden');
+                endDateInput.required = true;
+            } else if (type === 'normal-month') {
+                numMonthsField.classList.remove('hidden');
+                numMonthsInput.required = true;
+            }
+        }
+
+        function toggleYear(checkbox, cId, year, url) {
+            const isPaid = checkbox.checked;
+            fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: parseInt(year), is_paid: isPaid }),
+            })
+            .then(r => r.json())
+            .then(data => {
+                // Update all row checkboxes in this year
+                document.querySelectorAll(`#year-table-${cId}-${year} button[data-commitment-id]`).forEach(btn => {
+                    if (isPaid) {
+                        btn.classList.add('bg-blue-500', 'border-blue-500');
+                        btn.classList.remove('border-gray-400', 'bg-white');
+                        btn.querySelector('.check-icon').classList.remove('hidden');
+                    } else {
+                        btn.classList.remove('bg-blue-500', 'border-blue-500');
+                        btn.classList.add('border-gray-400', 'bg-white');
+                        btn.querySelector('.check-icon').classList.add('hidden');
+                    }
+                });
+
+                // Update stats
+                document.getElementById('paid-months-' + cId).textContent = data.paid_months;
+                const remainingEl = document.getElementById('remaining-months-' + cId);
+                if (remainingEl) remainingEl.textContent = data.months_remaining;
+                document.getElementById('amount-paid-' + cId).textContent = 'RM' + data.amount_paid;
+                const amountRemainingEl = document.getElementById('amount-remaining-' + cId);
+                if (amountRemainingEl) amountRemainingEl.textContent = 'RM' + data.amount_remaining;
+                const badgeEl = document.getElementById('badge-' + cId);
+                badgeEl.textContent = badgeEl.dataset.type === 'infinite'
+                    ? data.paid_months + ' months paid'
+                    : data.paid_months + '/' + data.total_months + ' months paid';
+                document.getElementById('progress-' + cId).style.width = data.progress + '%';
+
+                const statusEl = document.getElementById('status-' + cId);
+                if (data.is_completed) {
+                    statusEl.textContent = '✓ Completed';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-green-500 text-white';
+                } else if (data.is_on_track) {
+                    statusEl.textContent = '✓ On Track';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-yellow-400 text-white';
+                } else {
+                    statusEl.textContent = '✗ Off Track';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-red-500 text-white';
+                }
+            });
+        }
 
         function toggleDetail(id) {
             document.getElementById(id).classList.toggle('hidden');
@@ -262,19 +406,30 @@
                 }
 
                 document.getElementById('paid-months-' + cId).textContent     = data.paid_months;
-                document.getElementById('remaining-months-' + cId).textContent = data.months_remaining;
+                const remainingEl = document.getElementById('remaining-months-' + cId);
+                if (remainingEl) remainingEl.textContent = data.months_remaining;
                 document.getElementById('amount-paid-' + cId).textContent      = 'RM' + data.amount_paid;
-                document.getElementById('amount-remaining-' + cId).textContent = 'RM' + data.amount_remaining;
-                document.getElementById('badge-' + cId).textContent            = data.paid_months + '/' + data.total_months + ' months paid';
-                document.getElementById('progress-' + cId).style.width         = data.progress + '%';
+                const amountRemainingEl = document.getElementById('amount-remaining-' + cId);
+                if (amountRemainingEl) amountRemainingEl.textContent = 'RM' + data.amount_remaining;
+
+                const badgeEl = document.getElementById('badge-' + cId);
+                const isInfinite = badgeEl.dataset.type === 'infinite';
+                badgeEl.textContent = isInfinite
+                    ? data.paid_months + ' months paid'
+                    : data.paid_months + '/' + data.total_months + ' months paid';
+
+                document.getElementById('progress-' + cId).style.width = data.progress + '%';
 
                 const statusEl = document.getElementById('status-' + cId);
-                if (data.months_remaining === 0) {
-                    statusEl.textContent = '✓ Up to Date';
-                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-medium bg-green-100 text-green-700';
+                if (data.is_completed) {
+                    statusEl.textContent = '✓ Completed';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-green-500 text-white';
+                } else if (data.is_on_track) {
+                    statusEl.textContent = '✓ On Track';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-yellow-400 text-white';
                 } else {
-                    statusEl.textContent = '⏳ Pending';
-                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-medium bg-yellow-100 text-yellow-700';
+                    statusEl.textContent = '✗ Off Track';
+                    statusEl.className = 'text-sm px-3 py-1 rounded-full font-bold bg-red-500 text-white';
                 }
             });
         }

@@ -32,6 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/commitments', [CommitmentController::class, 'index'])->name('commitments.index');
     Route::post('/commitments', [CommitmentController::class, 'store'])->name('commitments.store');
     Route::post('/commitments/{commitment}/toggle/{payment}', [CommitmentController::class, 'togglePayment'])->name('commitments.toggle');
+    Route::post('/commitments/{commitment}/toggle-year', [CommitmentController::class, 'toggleYear'])->name('commitments.toggleYear');
     Route::delete('/commitments/{commitment}', [CommitmentController::class, 'destroy'])->name('commitments.destroy');
 });
 

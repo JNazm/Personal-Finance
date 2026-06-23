@@ -7,10 +7,11 @@ use Carbon\Carbon;
 
 class Commitment extends Model
 {
-    protected $fillable = ['user_id', 'name', 'amount_per_month', 'date_started'];
+    protected $fillable = ['user_id', 'name', 'amount_per_month', 'date_started', 'type', 'end_date'];
 
     protected $casts = [
         'date_started'     => 'date',
+        'end_date'         => 'date',
         'amount_per_month' => 'decimal:2',
     ];
 
@@ -19,12 +20,17 @@ class Commitment extends Model
         return $this->hasMany(CommitmentPayment::class);
     }
 
-    /** Ensure payment rows exist for every month from start up to current month. */
+    /** Ensure payment rows exist for every month from start up to end date. */
     public function syncPayments(): void
     {
-        $cursor = $this->date_started->copy()->startOfMonth();
-        // Generate up to end of next year
-        $end = \Carbon\Carbon::now()->addYear()->endOfYear()->startOfMonth();
+        $startDay = $this->date_started->day;
+        $cursor   = $this->date_started->copy()->day($startDay);
+
+        if (in_array($this->type, ['normal', 'normal-month']) && $this->end_date) {
+            $end = $this->end_date->copy()->day($startDay);
+        } else {
+            $end = \Carbon\Carbon::create(2040, 12, $startDay);
+        }
 
         while ($cursor->lte($end)) {
             $dateStr = $cursor->format('Y-m-d');
@@ -32,7 +38,7 @@ class Commitment extends Model
                 ['month_date' => $dateStr],
                 ['is_paid' => false]
             );
-            $cursor->addMonth();
+            $cursor->addMonthNoOverflow();
         }
     }
 

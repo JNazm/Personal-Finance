@@ -12,7 +12,7 @@ class DashboardController extends Controller
         $user        = auth()->user();
         $now         = Carbon::now();
         $thisMonth   = $now->format('Y-m');
-        $thisMonthDate = $now->startOfMonth()->toDateString();
+        $thisMonthDate = $now->copy()->startOfMonth()->toDateString();
 
         // --- Commitments ---
         $commitments = $user->commitments()->with('payments')->latest()->get();
@@ -22,14 +22,18 @@ class DashboardController extends Controller
         $commitments = $user->commitments()->with('payments')->latest()->get();
 
         $totalCommitmentPerMonth = $commitments->sum('amount_per_month');
+        $adjustedCommitmentPerMonth = max(0, $totalCommitmentPerMonth - 300);
 
-        $commitmentsThisMonth = $commitments->map(function ($c) use ($thisMonthDate) {
-            $payment = $c->payments->firstWhere('month_date', $thisMonthDate);
+        $commitmentsThisMonth = $commitments->map(function ($c) use ($thisMonth) {
+            $payment = $c->payments->first(fn($p) => str_starts_with($p->month_date, $thisMonth));
+            $notDueYet = $payment && $payment->month_date > now()->format('Y-m-d');
+            $isOnTrack = $notDueYet || ($payment && $payment->is_paid);
             return [
                 'name'      => $c->name,
                 'month'     => now()->format('m-Y'),
                 'amount'    => $c->amount_per_month,
                 'is_paid'   => $payment ? $payment->is_paid : false,
+                'on_track'  => $isOnTrack,
             ];
         });
 
@@ -41,20 +45,29 @@ class DashboardController extends Controller
 
         $debtsThisMonth = $debts->map(function ($d) use ($now) {
             $startDate = Carbon::parse($d->start_month);
-            $monthIndex = $startDate->diffInMonths($now->copy()->startOfMonth()) + 1;
+            $monthIndex = (int) $startDate->diffInMonths($now) + 1;
             $payment = null;
             if ($monthIndex >= 1 && $monthIndex <= $d->months) {
                 $payment = $d->payments->firstWhere('month_index', $monthIndex);
             }
-            $amountLeft = $d->amount_remaining;
+
+            $lastPaidPayment = $d->payments->where('is_paid', true)->sortByDesc('month_index')->first();
+            $lastPaidMonth = $lastPaidPayment
+                ? $startDate->copy()->addMonths($lastPaidPayment->month_index - 1)->format('d-m-Y')
+                : '-';
+
+            $isCompleted = $d->months_remaining <= 0;
+            $isOnTrack   = $payment && $payment->is_paid;
+
             return [
                 'name'            => $d->name,
                 'months_remaining'=> $d->months_remaining,
-                'month'           => $now->format('m-Y'),
+                'month'           => $lastPaidMonth,
                 'amount'          => $d->payment_per_month,
-                'amount_remaining'=> $amountLeft,
+                'amount_remaining'=> $d->amount_remaining,
                 'is_paid'         => $payment ? $payment->is_paid : false,
-                'completed'       => $d->months_remaining <= 0,
+                'completed'       => $isCompleted,
+                'on_track'        => $isOnTrack,
             ];
         });
 
@@ -68,21 +81,31 @@ class DashboardController extends Controller
 
         $otherDebtsThisMonth = $otherDebts->map(function ($d) use ($now) {
             $startDate = Carbon::parse($d->start_month);
-            $monthIndex = $startDate->diffInMonths($now->copy()->startOfMonth()) + 1;
+            $monthIndex = (int) $startDate->diffInMonths($now) + 1;
             $payment = null;
             if ($monthIndex >= 1 && $monthIndex <= $d->months) {
                 $payment = $d->payments->firstWhere('month_index', $monthIndex);
             }
+
+            $lastPaidPayment = $d->payments->where('is_paid', true)->sortByDesc('month_index')->first();
+            $lastPaidMonth = $lastPaidPayment
+                ? $startDate->copy()->addMonths($lastPaidPayment->month_index - 1)->format('d-m-Y')
+                : '-';
+
+            $isCompleted = $d->months_remaining <= 0;
+            $isOnTrack   = !$isCompleted && $payment && $payment->is_paid;
+
             return [
                 'id'              => $d->id,
                 'person'          => $d->person,
                 'name'            => $d->name,
                 'months_remaining'=> $d->months_remaining,
-                'month'           => $now->format('m-Y'),
+                'month'           => $lastPaidMonth,
                 'amount'          => $d->payment_per_month,
                 'amount_remaining'=> $d->amount_remaining,
                 'is_paid'         => $payment ? $payment->is_paid : false,
-                'completed'       => $d->months_remaining <= 0,
+                'completed'       => $isCompleted,
+                'on_track'        => $isOnTrack,
             ];
         });
 
@@ -93,15 +116,15 @@ class DashboardController extends Controller
         // --- Pie chart data ---
         $salary = (float) $user->monthly_salary;
         $pieLabels = ['Net Salary', 'Total Monthly Commitments', 'Total Short-Term Debt'];
-        $total = $salary + $totalCommitmentPerMonth + $totalDebtPerMonth + $totalOtherDebtPerMonth;
+        $total = $salary + $adjustedCommitmentPerMonth + $totalDebtPerMonth + $totalOtherDebtPerMonth;
         $pieValues = $total > 0 ? [
             round($salary / $total * 100, 1),
-            round($totalCommitmentPerMonth / $total * 100, 1),
-            round(($totalDebtPerMonth + $totalOtherDebtPerMonth) / $total * 100, 1),
+            round($adjustedCommitmentPerMonth / $total * 100, 1),
+            round($totalDebtPerMonth / $total * 100, 1),
         ] : [33.3, 33.3, 33.3];
 
         return view('dashboard', compact(
-            'user', 'salary', 'totalCommitmentPerMonth', 'totalDebtPerMonth', 'totalOtherDebtPerMonth',
+            'user', 'salary', 'totalCommitmentPerMonth', 'adjustedCommitmentPerMonth', 'totalDebtPerMonth', 'totalOtherDebtPerMonth',
             'commitmentsThisMonth', 'debtsThisMonth', 'otherDebtsThisMonth',
             'myDebtThisMonthTotal', 'otherDebtThisMonthTotal',
             'pieLabels', 'pieValues', 'otherDebts'

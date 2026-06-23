@@ -57,11 +57,11 @@
                             <p class="text-xs text-gray-500 uppercase mt-0.5">Monthly Salary</p>
                         </div>
                         <div class="bg-yellow-50 rounded-xl p-3">
-                            <p class="text-lg font-bold text-yellow-600">RM{{ number_format($totalCommitmentPerMonth, 2) }}</p>
+                            <p class="text-lg font-bold text-yellow-600">RM{{ number_format($adjustedCommitmentPerMonth, 2) }}</p>
                             <p class="text-xs text-gray-500 uppercase mt-0.5">Commitments/Mo</p>
                         </div>
                         <div class="bg-red-50 rounded-xl p-3">
-                            <p class="text-lg font-bold text-red-600">RM{{ number_format($totalDebtPerMonth + $totalOtherDebtPerMonth, 2) }}</p>
+                            <p class="text-lg font-bold text-red-600">RM{{ number_format($totalDebtPerMonth, 2) }}</p>
                             <p class="text-xs text-gray-500 uppercase mt-0.5">Debts/Mo</p>
                         </div>
                     </div>
@@ -95,7 +95,7 @@
                                         <td class="py-2 px-3 text-center text-gray-600">{{ $c['month'] }}</td>
                                         <td class="py-2 px-3 text-right text-gray-800">RM{{ number_format($c['amount'], 2) }}</td>
                                         <td class="py-2 px-3 text-center">
-                                            @if($c['is_paid'])
+                                            @if($c['on_track'])
                                                 <span class="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-semibold">Good</span>
                                             @else
                                                 <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded font-semibold">Not Good</span>
@@ -110,10 +110,10 @@
                     </div>
                 </div>
 
-                {{-- Short Term Debt From Me --}}
+                {{-- My Debt --}}
                 <div class="bg-white shadow-sm rounded-2xl overflow-hidden">
                     <div class="bg-slate-700 px-4 py-3">
-                        <h3 class="text-white text-sm font-bold text-center uppercase tracking-wide">Short Term Debt From Me</h3>
+                        <h3 class="text-white text-sm font-bold text-center uppercase tracking-wide">My Debt</h3>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-xs">
@@ -136,12 +136,10 @@
                                         <td class="py-2 px-3 text-center text-gray-600">{{ $d['month'] }}</td>
                                         <td class="py-2 px-3 text-right text-gray-800">RM{{ number_format($d['amount'], 2) }}</td>
                                         <td class="py-2 px-3 text-center">
-                                            @if($d['completed'])
-                                                <span class="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded font-semibold">Completed</span>
-                                            @elseif($d['is_paid'])
-                                                <span class="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-semibold">Good</span>
+                                            @if($d['completed'] || $d['on_track'])
+                                                <span class="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-bold">Good</span>
                                             @else
-                                                <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded font-semibold">Not Good</span>
+                                                <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded font-bold">Not Good</span>
                                             @endif
                                         </td>
                                     </tr>
@@ -181,12 +179,10 @@
                                         <td class="py-2 px-3 text-center text-gray-600">{{ $d['month'] }}</td>
                                         <td class="py-2 px-3 text-right text-gray-800">RM{{ number_format($d['amount'], 2) }}</td>
                                         <td class="py-2 px-3 text-center">
-                                            @if($d['completed'])
-                                                <span class="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded font-semibold">Completed</span>
-                                            @elseif($d['is_paid'])
-                                                <span class="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-semibold">Good</span>
+                                            @if($d['completed'] || $d['on_track'])
+                                                <span class="bg-green-600 text-white text-xs px-2 py-0.5 rounded font-bold">Good</span>
                                             @else
-                                                <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded font-semibold">Not Good</span>
+                                                <span class="bg-red-500 text-white text-xs px-2 py-0.5 rounded font-bold">Not Good</span>
                                             @endif
                                         </td>
                                     </tr>

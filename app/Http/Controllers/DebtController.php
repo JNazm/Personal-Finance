@@ -20,14 +20,14 @@ class DebtController extends Controller
             'name'         => 'required|string|max:255',
             'total_amount' => 'required|numeric|min:0.01',
             'months'       => 'required|integer|min:1',
-            'start_month'  => 'required|date_format:Y-m',
+            'start_month'  => 'required|date',
         ]);
 
         $debt = auth()->user()->debts()->create([
             'name'         => $validated['name'],
             'total_amount' => $validated['total_amount'],
             'months'       => $validated['months'],
-            'start_month'  => $validated['start_month'] . '-01',
+            'start_month'  => $validated['start_month'],
         ]);
 
         // Create payment rows for each month
@@ -49,16 +49,24 @@ class DebtController extends Controller
         $payment = $debt->payments()->where('month_index', $monthIndex)->firstOrFail();
         $payment->update(['is_paid' => !$payment->is_paid]);
 
-        // Recalculate stats
         $debt->load('payments');
+
+        $startDate         = \Carbon\Carbon::parse($debt->start_month);
+        $currentMonthIndex = (int) $startDate->diffInMonths(now()) + 1;
+        $currentPayment    = $debt->payments->firstWhere('month_index', $currentMonthIndex);
+        $isCompleted       = $debt->paid_months_count >= $debt->months;
+        $isOnTrack         = $currentPayment && $currentPayment->is_paid;
+
         return response()->json([
-            'is_paid'          => $payment->is_paid,
-            'paid_months'      => $debt->paid_months_count,
-            'total_months'     => $debt->months,
-            'months_remaining' => $debt->months_remaining,
-            'amount_paid'      => number_format($debt->amount_paid, 2),
-            'amount_remaining' => number_format($debt->amount_remaining, 2),
-            'progress'         => $debt->months > 0 ? round(($debt->paid_months_count / $debt->months) * 100, 1) : 0,
+            'is_paid'           => $payment->is_paid,
+            'paid_months'       => $debt->paid_months_count,
+            'total_months'      => $debt->months,
+            'months_remaining'  => $debt->months_remaining,
+            'amount_paid'       => number_format($debt->amount_paid, 2),
+            'amount_remaining'  => number_format($debt->amount_remaining, 2),
+            'progress'          => $debt->months > 0 ? round(($debt->paid_months_count / $debt->months) * 100, 1) : 0,
+            'is_completed'      => $isCompleted,
+            'is_on_track'       => $isOnTrack,
         ]);
     }
 

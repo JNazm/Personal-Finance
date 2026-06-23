@@ -22,7 +22,7 @@ class OtherDebtController extends Controller
             'name'         => 'required|string|max:255',
             'total_amount' => 'required|numeric|min:0.01',
             'months'       => 'required|integer|min:1',
-            'start_month'  => 'required|date_format:Y-m',
+            'start_month'  => 'required|date',
         ]);
 
         $debt = auth()->user()->otherDebts()->create([
@@ -30,7 +30,7 @@ class OtherDebtController extends Controller
             'name'         => $validated['name'],
             'total_amount' => $validated['total_amount'],
             'months'       => $validated['months'],
-            'start_month'  => $validated['start_month'] . '-01',
+            'start_month'  => $validated['start_month'],
         ]);
 
         for ($i = 1; $i <= $debt->months; $i++) {
@@ -47,6 +47,13 @@ class OtherDebtController extends Controller
         $payment->update(['is_paid' => !$payment->is_paid]);
 
         $otherDebt->load('payments');
+
+        $startDate         = Carbon::parse($otherDebt->start_month);
+        $currentMonthIndex = (int) $startDate->diffInMonths(now()) + 1;
+        $currentPayment    = $otherDebt->payments->firstWhere('month_index', $currentMonthIndex);
+        $isCompleted       = $otherDebt->paid_months_count >= $otherDebt->months;
+        $isOnTrack         = !$isCompleted && $currentPayment && $currentPayment->is_paid;
+
         return response()->json([
             'is_paid'          => $payment->is_paid,
             'paid_months'      => $otherDebt->paid_months_count,
@@ -55,6 +62,8 @@ class OtherDebtController extends Controller
             'amount_paid'      => number_format($otherDebt->amount_paid, 2),
             'amount_remaining' => number_format($otherDebt->amount_remaining, 2),
             'progress'         => $otherDebt->months > 0 ? round(($otherDebt->paid_months_count / $otherDebt->months) * 100, 1) : 0,
+            'is_completed'     => $isCompleted,
+            'is_on_track'      => $isOnTrack,
         ]);
     }
 
