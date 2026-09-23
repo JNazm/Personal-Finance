@@ -1,0 +1,11 @@
+# Serve the app under a path prefix (e.g. nazmifinance.online/personal-finance)
+# instead of the domain root, so this box can host other things at "/" later.
+{$DOMAIN} {
+	redir /personal-finance /personal-finance/
+
+	handle_path /personal-finance/* {
+		reverse_proxy app:80
+	}
+
+	encode gzip
+}
