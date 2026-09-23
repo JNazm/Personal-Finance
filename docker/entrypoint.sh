@@ -41,5 +41,9 @@ if [ "$READY" -eq 0 ]; then
     echo "ERROR: php-fpm never became ready."
 fi
 
+echo "==> Preparing nginx temporary directories..."
+mkdir -p /var/lib/nginx/tmp
+chown -R www-data:www-data /var/lib/nginx/tmp
+
 echo "==> Starting nginx..."
 exec nginx -g "daemon off;"
