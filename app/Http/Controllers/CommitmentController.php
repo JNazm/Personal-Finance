@@ -90,7 +90,7 @@ class CommitmentController extends Controller
         $request->validate(['year' => 'required|integer', 'is_paid' => 'required|boolean']);
 
         $commitment->payments()
-            ->whereRaw("strftime('%Y', month_date) = ?", [(string) $request->year])
+            ->whereYear('month_date', $request->integer('year'))
             ->update(['is_paid' => $request->is_paid]);
 
         $commitment->load('payments');

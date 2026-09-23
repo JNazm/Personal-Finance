@@ -43,7 +43,7 @@ fi
 
 echo "==> Preparing nginx temporary directories..."
 mkdir -p /var/lib/nginx/tmp
-chown -R www-data:www-data /var/lib/nginx/tmp
+chown -R www-data:www-data /var/lib/nginx
 
 echo "==> Starting nginx..."
 exec nginx -g "daemon off;"
