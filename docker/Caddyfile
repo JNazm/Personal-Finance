@@ -1,10 +1,26 @@
 # Serve the app under a path prefix (e.g. nazmifinance.online/personal-finance)
-# instead of the domain root, so this box can host other things at "/" later.
+# instead of the domain root, so the same domain can host other things too:
+# "/" is a static landing page with a choice of destinations, and
+# "/whisperdesk" reverse-proxies to the WhisperDesk container (see
+# ../../whisperdesk/docker-compose.yml — it joins the same "edge" network).
 {$DOMAIN} {
 	redir /personal-finance /personal-finance/
+	redir /whisperdesk /whisperdesk/
 
 	handle_path /personal-finance/* {
 		reverse_proxy app:80
+	}
+
+	# WhisperDesk (Gradio) is told its mount point via WHISPERDESK_ROOT_PATH, so
+	# unlike /personal-finance above, the "/whisperdesk" prefix must reach the
+	# app unstripped — use handle, not handle_path.
+	handle /whisperdesk/* {
+		reverse_proxy whisperdesk:7860
+	}
+
+	handle {
+		root * /srv/landing
+		file_server
 	}
 
 	encode gzip

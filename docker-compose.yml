@@ -41,12 +41,14 @@ services:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env.docker}
     volumes:
       - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/landing:/srv/landing:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - app
     networks:
       - internal
+      - edge
 
   # Optional alternative to port-forwarding + Caddy's public ports above.
   # Use this if your ISP's router is behind CGNAT (common on Malaysian home
@@ -69,6 +71,11 @@ services:
 
 networks:
   internal:
+  # Shared with the separate WhisperDesk stack (whisperdesk/docker-compose.yml)
+  # so Caddy can reverse-proxy to it by container name. Create once with:
+  #   docker network create edge
+  edge:
+    external: true
 
 volumes:
   db_data:
