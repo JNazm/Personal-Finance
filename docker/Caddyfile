@@ -3,7 +3,14 @@
 # "/" is a static landing page with a choice of destinations, and
 # "/whisperdesk" reverse-proxies to the WhisperDesk container (see
 # ../../whisperdesk/docker-compose.yml — it joins the same "edge" network).
-{$DOMAIN} {
+#
+# Plain "http://" scheme: this box is reached via Cloudflare Tunnel, which
+# terminates TLS at Cloudflare's edge and forwards plain HTTP to caddy:80, so
+# Caddy must NOT redirect to HTTPS or try to obtain its own certificate here
+# (it has no public inbound port for the ACME HTTP-01 challenge anyway).
+# If you switch to router port-forwarding instead (see docs section 1),
+# change this back to a bare "{$DOMAIN}" so Caddy manages Let's Encrypt certs.
+http://{$DOMAIN} {
 	redir /personal-finance /personal-finance/
 	redir /whisperdesk /whisperdesk/
 

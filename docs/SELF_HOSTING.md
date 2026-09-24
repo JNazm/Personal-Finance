@@ -9,7 +9,7 @@ stack, at `/whisperdesk`) — see [section 6](#6-whisperdesk-at-domain-root--whi
 
 Files involved:
 - [docker-compose.yml](../docker-compose.yml) — app (Laravel/Nginx/PHP-FPM), Postgres, Caddy reverse proxy.
-- [docker/Caddyfile](../docker/Caddyfile) — reverse proxy + automatic HTTPS (Let's Encrypt); strips the `/personal-finance` prefix before forwarding to the app container, serves the landing page at `/`, and proxies `/whisperdesk` to the WhisperDesk stack.
+- [docker/Caddyfile](../docker/Caddyfile) — reverse proxy; strips the `/personal-finance` prefix before forwarding to the app container, serves the landing page at `/`, and proxies `/whisperdesk` to the WhisperDesk stack. Serves plain HTTP by default (`http://{$DOMAIN}`) because Cloudflare Tunnel (section 1b) terminates HTTPS at Cloudflare's edge — if you use router port-forwarding instead (section 1), change the Caddyfile's site address back to a bare `{$DOMAIN}` so Caddy manages its own Let's Encrypt certificate.
 - [docker/landing/index.html](../docker/landing/index.html) — the domain-root landing page (choice of Personal Finance / WhisperDesk).
 - [app/Providers/AppServiceProvider.php](../app/Providers/AppServiceProvider.php) — forces Laravel's generated URLs (routes, redirects, assets) to include the `/personal-finance` prefix via `URL::forceRootUrl()`, since the app itself sees stripped, root-relative requests.
 - `.env.docker` — your real secrets/config (copy from [.env.docker.example](../.env.docker.example), never commit it).
@@ -89,8 +89,14 @@ docker compose --env-file .env.docker up -d --build
 ```
 
 This builds the app image, starts Postgres, runs migrations (via the existing
-[entrypoint.sh](../docker/entrypoint.sh)), and starts Caddy, which automatically
-requests/renews a Let's Encrypt certificate for `DOMAIN` on first request.
+[entrypoint.sh](../docker/entrypoint.sh)), and starts Caddy.
+
+If you're on **Cloudflare Tunnel** (section 1b, the default Caddyfile scheme),
+Cloudflare handles HTTPS for you — nothing else to do here. If you're using
+**router port-forwarding** (section 1) instead, first edit
+[docker/Caddyfile](../docker/Caddyfile) and change `http://{$DOMAIN}` back to
+a bare `{$DOMAIN}`, so Caddy automatically requests/renews its own Let's
+Encrypt certificate for `DOMAIN` on first request.
 
 Visit **`https://nazmifinance.online/personal-finance`** once it's up.
 
